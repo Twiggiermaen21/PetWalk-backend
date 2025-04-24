@@ -1,6 +1,6 @@
 # PetWalk-backend
 
-Backend aplikacji **PetWalk** – platformy do organizowania spacerów z psami.
+Backend aplikacji **PetWalk** – aplikacja mobilna do spacerów z psami.
 
 ## 📦 Technologie
 

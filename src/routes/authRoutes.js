@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import protectRoute from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -93,5 +94,36 @@ router.post("/login", async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+
+router.put("/update-username", protectRoute, async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username || username.length < 3) {
+            return res.status(400).json({ message: "Username must be at least 3 characters long" });
+        }
+
+        console.log(req.user._id);
+
+        // Aktualizacja username w bazie danych
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { username },
+            { new: true }
+        );
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        return res.status(200).json({
+            message: "Username updated successfully",
+            username: user.username
+        });
+
+    } catch (error) {
+        console.error("Error updating username:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 
 export default router;

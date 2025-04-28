@@ -96,31 +96,61 @@ router.post("/login", async (req, res) => {
 });
 
 
-router.put("/update-username", protectRoute, async (req, res) => {
+router.put("/update-user", protectRoute, async (req, res) => {
     try {
-        const { username } = req.body;
-        if (!username || username.length < 3) {
-            return res.status(400).json({ message: "Username must be at least 3 characters long" });
+        const { username, email, password, profileImage } = req.body;
+
+        const updates = {};
+
+        // Walidacja i dodawanie pól do aktualizacji
+        if (username) {
+            if (username.length < 3) {
+                return res.status(400).json({ message: "Username must be at least 3 characters long" });
+            }
+            updates.username = username;
         }
 
-        console.log(req.user._id);
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ message: "Invalid email format" });
+            }
+            updates.email = email;
+        }
 
-        // Aktualizacja username w bazie danych
-        const user = await User.findByIdAndUpdate(
+        if (profileImage) {
+            updates.profileImage = profileImage;
+        }
+
+        if (password) {
+            if (password.length < 8) {
+                return res.status(400).json({ message: "Password must be at least 8 characters long" });
+            }
+            // Hasło trzeba zakodować przed zapisaniem
+            const user = await User.findById(req.user._id);
+            if (!user) return res.status(404).json({ message: "User not found" });
+
+            user.password = password;
+            await user.save(); // Hashowanie powinno być w modelu, np. pre('save')
+
+            // hasło jest już zaktualizowane, teraz aktualizujemy resztę pól
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
             req.user._id,
-            { username },
+            { $set: updates },
             { new: true }
-        );
+        ).select('-password'); // Usuwamy hasło z odpowiedzi
 
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
         return res.status(200).json({
-            message: "Username updated successfully",
-            username: user.username
+            message: "User updated successfully",
+            user: updatedUser
         });
 
     } catch (error) {
-        console.error("Error updating username:", error);
+        console.error("Error updating user:", error);
         res.status(500).json({ message: "Server error" });
     }
 });

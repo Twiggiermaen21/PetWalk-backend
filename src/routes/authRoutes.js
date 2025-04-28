@@ -100,58 +100,57 @@ router.put("/update-user", protectRoute, async (req, res) => {
     try {
         const { username, email, password, profileImage } = req.body;
 
-        const updates = {};
+        // Znajdź użytkownika po ID
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: "User not found" });
 
         // Walidacja i dodawanie pól do aktualizacji
+
+        // Walidacja username
         if (username) {
             if (username.length < 3) {
                 return res.status(400).json({ message: "Username must be at least 3 characters long" });
             }
-            updates.username = username;
+            user.username = username; // Zmieniamy pole username
         }
 
+        // Walidacja email
         if (email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 return res.status(400).json({ message: "Invalid email format" });
             }
-            updates.email = email;
+
+            const existingUser = await User.findOne({ email });
+            if (existingUser && existingUser._id.toString() !== req.user._id.toString()) {
+                return res.status(409).json({ message: "Email already in use" });
+            }
+            user.email = email; // Zmieniamy pole email
         }
 
+        // Walidacja profileImage
         if (profileImage) {
-            updates.profileImage = profileImage;
+            user.profileImage = `https://api.dicebear.com/9.x/avataaars/svg?seed=${profileImage}`; // Zmieniamy profilowe
         }
 
+        // Walidacja i zmiana hasła
         if (password) {
             if (password.length < 8) {
                 return res.status(400).json({ message: "Password must be at least 8 characters long" });
             }
-            // Hasło trzeba zakodować przed zapisaniem
-            const user = await User.findById(req.user._id);
-            if (!user) return res.status(404).json({ message: "User not found" });
-
-            user.password = password;
-            await user.save(); // Hashowanie powinno być w modelu, np. pre('save')
-
-            // hasło jest już zaktualizowane, teraz aktualizujemy resztę pól
+            user.password = password; // Hasło będzie zahashowane w pre-save hook
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            req.user._id,
-            { $set: updates },
-            { new: true }
-        ).select('-password'); // Usuwamy hasło z odpowiedzi
-
-        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+        // Zapisz użytkownika po dokonaniu wszystkich zmian
+        await user.save(); // Tylko jedno wywołanie save()
 
         return res.status(200).json({
             message: "User updated successfully",
-            user: updatedUser
         });
 
     } catch (error) {
         console.error("Error updating user:", error);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({ message: "Server error" });
     }
 });
 

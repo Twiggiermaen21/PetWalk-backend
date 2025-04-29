@@ -2,7 +2,8 @@ import express from "express";
 import Walk from "../models/Walk.js";
 import User from "../models/User.js";
 import protectRoute from "../middleware/auth.middleware.js";
-
+import Dog from "../models/Dog.js";
+import cloudinary from "../lib/cloudinary.js"
 const router = express.Router();
 
 router.post("/", protectRoute, async (req, res) => {
@@ -65,17 +66,44 @@ router.get("/", protectRoute, async (req, res) => {
 router.delete("/:id", protectRoute, async (req, res) => {
     try {
         const walk = await Walk.findById(req.params.id);
-        if (!walk) return res.status(400).json({ message: "Book not found" });
+        if (!walk) return res.status(400).json({ message: "Walk not found" });
 
         //check if user is the creator of the walk
         if (walk.user.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
+        const deletedDog = await Dog.findOne({
+            _id: { $in: walk.dogs },  // Szukamy psów, które są w tablicy `dogs` w tym spacerze
+            isDeleted: true            // i mają isDeleted ustawione na true
+        });
+
+        // Jeśli znaleźliśmy psa z isDeleted: true, to nie wykonujemy usuwania zdjęcia
+        if (deletedDog) {
+            return res.status(400).json({ message: "One of the dogs in this walk is marked as deleted." });
+
+
+        }
+        console.log(deletedDog);
+        // Jeśli żaden pies nie jest oznaczony jako usunięty, sprawdzamy, czy mamy jakiekolwiek zdjęcie do usunięcia
+        const dog = await Dog.findById(walk.dogs[0]); // Załóżmy, że chcesz sprawdzić pierwszy pies w tablicy dogs
+        if (!dog) return res.status(400).json({ message: "Dog not found" });
+
+        // Jeśli pies nie ma innych spacerów, wykonaj operację usuwania zdjęcia z Cloudinary
+        try {
+            if (dog.dogImage) {
+                const publicId = dog.dogImage.split("/").pop().split(".")[0];
+                await cloudinary.uploader.destroy(publicId);
+            }
+        } catch (deleteError) {
+            console.log("Error deleting image from cloudinary", deleteError);
+        }
+
+        // Usunięcie spaceru
         await walk.deleteOne();
 
-        res.json({ message: "Walk deleted succesfully" })
+        res.json({ message: "Walk deleted successfully" });
     } catch (error) {
-        console.log("Error deleting book", error);
+        console.log("Error deleting walk", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });

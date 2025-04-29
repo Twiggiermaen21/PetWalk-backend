@@ -44,7 +44,7 @@ router.post("/add-dog", protectRoute, async (req, res) => {
 });
 router.get("/get-dog", protectRoute, async (req, res) => {
     try {
-        const dogs = await Dog.find({ owner: req.user.id }).sort({ createdAt: -1 });
+        const dogs = await Dog.find({ owner: req.user.id, isDeleted: false }).sort({ createdAt: -1 });
         res.send({ dogs });
     } catch (error) {
         console.log("Error in get user dogs route", error);

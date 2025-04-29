@@ -51,7 +51,7 @@ router.get("/get-dog", protectRoute, async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
-router.delete("/:id", protectRoute, async (req, res) => {
+router.patch("/:id", protectRoute, async (req, res) => {
     try {
         const dog = await Dog.findById(req.params.id);
         if (!dog) return res.status(400).json({ message: "Dog not found" });
@@ -60,17 +60,20 @@ router.delete("/:id", protectRoute, async (req, res) => {
         if (dog.owner.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
-        try {
-            if (dog.dogImage) {
-                const publicId = dog.dogImage.split("/").pop().split(".")[0];
-                await cloudinary.uploader.destroy(publicId);
-            }
-        } catch (deleteError) {
-            console.log("Error deleting image from cloudinary", deleteError);
-        }
+        // try {
+        //     if (dog.dogImage) {
+        //         const publicId = dog.dogImage.split("/").pop().split(".")[0];
+        //         await cloudinary.uploader.destroy(publicId);
+        //     }
+        // } catch (deleteError) {
+        //     console.log("Error deleting image from cloudinary", deleteError);
+        // }
 
-        await dog.deleteOne();
+        // await dog.deleteOne();
 
+
+        dog.isDeleted = true;
+        await dog.save();
         res.json({ message: "Dog deleted succesfully" })
     } catch (error) {
         console.log("Error deleting Dog", error);

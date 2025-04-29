@@ -31,6 +31,10 @@ const dogSchema = new mongoose.Schema(
             ref: "User",
             required: true
 
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
         }
     },
     { timestamps: true } // Dodanie automatycznych timestampów dla każdego dokumentu

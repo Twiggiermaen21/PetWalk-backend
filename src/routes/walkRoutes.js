@@ -61,52 +61,69 @@ router.get("/", protectRoute, async (req, res) => {
     }
 });
 
-
-
 router.delete("/:id", protectRoute, async (req, res) => {
     try {
         const walk = await Walk.findById(req.params.id);
         if (!walk) return res.status(400).json({ message: "Walk not found" });
 
-        //check if user is the creator of the walk
         if (walk.user.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
-        const deletedDog = await Dog.findOne({
-            _id: { $in: walk.dogs },  // Szukamy psów, które są w tablicy `dogs` w tym spacerze
-            isDeleted: true            // i mają isDeleted ustawione na true
+        // 1. Znajdź psy oznaczone jako usunięte w tym spacerze
+        const deletedDogs = await Dog.find({
+            _id: { $in: walk.dogs },
+            isDeleted: true
         });
 
-        // Jeśli znaleźliśmy psa z isDeleted: true, to nie wykonujemy usuwania zdjęcia
-        if (deletedDog) {
-            return res.status(400).json({ message: "One of the dogs in this walk is marked as deleted." });
+        if (deletedDogs.length > 0) {
+            const deletedDogIds = deletedDogs.map(dog => dog._id);
 
+            // 2. Znajdź inne spacery, w których występują te usunięte psy (poza aktualnym)
+            const walksWithDeletedDogs = await Walk.find({
+                _id: { $ne: walk._id }, // pomijamy aktualny spacer
+                dogs: { $in: deletedDogIds }
+            });
 
-        }
-        console.log(deletedDog);
-        // Jeśli żaden pies nie jest oznaczony jako usunięty, sprawdzamy, czy mamy jakiekolwiek zdjęcie do usunięcia
-        const dog = await Dog.findById(walk.dogs[0]); // Załóżmy, że chcesz sprawdzić pierwszy pies w tablicy dogs
-        if (!dog) return res.status(400).json({ message: "Dog not found" });
-
-        // Jeśli pies nie ma innych spacerów, wykonaj operację usuwania zdjęcia z Cloudinary
-        try {
-            if (dog.dogImage) {
-                const publicId = dog.dogImage.split("/").pop().split(".")[0];
-                await cloudinary.uploader.destroy(publicId);
+            // 3. Jeśli nie ma innych spacerów, usuń zdjęcia i psy
+            if (walksWithDeletedDogs.length === 0) {
+                for (const dog of deletedDogs) {
+                    try {
+                        if (dog.dogImage) {
+                            const publicId = dog.dogImage.split("/").pop().split(".")[0];
+                            await cloudinary.uploader.destroy(publicId);
+                        }
+                        await dog.deleteOne();
+                    } catch (err) {
+                        console.log("Error deleting dog or image:", err);
+                    }
+                }
             }
-        } catch (deleteError) {
-            console.log("Error deleting image from cloudinary", deleteError);
         }
 
-        // Usunięcie spaceru
+        // 4. Usuń spacer
         await walk.deleteOne();
-
         res.json({ message: "Walk deleted successfully" });
+
     } catch (error) {
         console.log("Error deleting walk", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
 
+router.post("/upload-image", protectRoute, async (req, res) => {
+    try {
+        const { image } = req.body;
+        if (!image) return res.status(400).json({ message: "No image provided" });
+
+        const uploaded = await cloudinary.uploader.upload(image, {
+            folder: "PetWalk/Users"
+        });
+
+        res.json({ imageUrl: uploaded.secure_url });
+    } catch (error) {
+        console.error("Upload failed", error);
+        res.status(500).json({ message: "Upload error" });
+    }
+});
 
 export default router;

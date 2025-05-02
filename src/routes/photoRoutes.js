@@ -12,7 +12,7 @@ const router = express.Router();
 router.get("/", protectRoute, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 9;
+        const limit = parseInt(req.query.limit) || 18;
         const skip = (page - 1) * limit;
 
         const photos = await Photo.find({ user: req.user.id })
@@ -88,9 +88,9 @@ router.post("/upload-image", protectRoute, async (req, res) => {
     try {
         const data = new Date().toLocaleDateString();
         const { image, user } = req.body;
-        if (!image && !user) {
+        if (!image || !user) {
             console.log(image);
-            console.log(user);
+
             return res.status(400).json({ message: "No image provided" });
         }
 

@@ -112,11 +112,12 @@ router.delete("/:id", protectRoute, async (req, res) => {
 
 router.post("/upload-image", protectRoute, async (req, res) => {
     try {
-        const { image } = req.body;
+        const data = new Date().toLocaleDateString();
+        const { image, user } = req.body;
         if (!image) return res.status(400).json({ message: "No image provided" });
 
         const uploaded = await cloudinary.uploader.upload(image, {
-            folder: "PetWalk/Users"
+            folder: `PetWalk/${user.id}/${data}`
         });
 
         res.json({ imageUrl: uploaded.secure_url });

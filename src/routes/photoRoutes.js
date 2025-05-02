@@ -1,40 +1,13 @@
 import express from "express";
 import Walk from "../models/Walk.js";
-import User from "../models/User.js";
+
 import protectRoute from "../middleware/auth.middleware.js";
 import Dog from "../models/Dog.js";
+import Photo from "../models/Photos.js";
 import cloudinary from "../lib/cloudinary.js"
 const router = express.Router();
 
-router.post("/", protectRoute, async (req, res) => {
 
-    try {
-
-        const { time, speed, distance, path, dogs } = req.body;
-
-        const newWalk = new Walk({
-            time,
-            speed,
-            distance,
-            path,
-            user: req.user._id,
-            dogs
-        });
-
-        await newWalk.save();
-
-        await User.findByIdAndUpdate(
-            req.user._id,
-            { $inc: { rank: 1 } }, // zwiększamy pole rank o 1
-            { new: true }
-        );
-        res.status(201).json(newWalk);
-
-    } catch (error) {
-        console.log('Error creating Walk', error);
-        res.status(500).json({ message: error.message });
-    }
-});
 
 router.get("/", protectRoute, async (req, res) => {
     try {
@@ -116,11 +89,22 @@ router.post("/upload-image", protectRoute, async (req, res) => {
         const { image, user } = req.body;
         if (!image) return res.status(400).json({ message: "No image provided" });
 
-        const uploaded = await cloudinary.uploader.upload(image, {
-            folder: `PetWalk/${user.id}/${data}`
-        });
+        let imageUrl = "";
+        if (image) {
+            const uploadResponse = await cloudinary.uploader.upload(image, {
+                folder: `PetWalk/${user.id}/${data}`
+            });
+            imageUrl = uploadResponse.secure_url;
+        }
 
-        res.json({ imageUrl: uploaded.secure_url });
+        const newPhoto = new Photo({
+            photo: imageUrl,
+            user: req.user._id
+        })
+
+
+        await newPhoto.saave();
+        res.status(200).json({ message: "Photo added successfully" });
     } catch (error) {
         console.error("Upload failed", error);
         res.status(500).json({ message: "Upload error" });

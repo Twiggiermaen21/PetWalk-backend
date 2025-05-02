@@ -35,10 +35,6 @@ const walkSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Dog",
         required: true
-    }],
-    photos: [{
-        type: String,
-        default: ""
     }]
 }, { timestamps: true });
 

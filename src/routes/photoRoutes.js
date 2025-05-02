@@ -12,18 +12,19 @@ const router = express.Router();
 router.get("/", protectRoute, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5;
+        const limit = parseInt(req.query.limit) || 9;
         const skip = (page - 1) * limit;
 
-        const walks = await Walk.find({ user: req.user.id }).sort({ createdAt: -1 })
+        const photos = await Photo.find({ user: req.user.id })
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate("dogs");
 
-        const totalPages = await Walk.countDocuments({ user: req.user.id });
+
+        const totalPages = await Photo.countDocuments({ user: req.user.id });
 
         res.send({
-            walks,
+            photos,
             currentPage: page,
             totalPages: Math.ceil(totalPages / limit),
         });
@@ -87,7 +88,11 @@ router.post("/upload-image", protectRoute, async (req, res) => {
     try {
         const data = new Date().toLocaleDateString();
         const { image, user } = req.body;
-        if (!image) return res.status(400).json({ message: "No image provided" });
+        if (!image && !user) {
+            console.log(image);
+            console.log(user);
+            return res.status(400).json({ message: "No image provided" });
+        }
 
         let imageUrl = "";
         if (image) {
@@ -103,7 +108,7 @@ router.post("/upload-image", protectRoute, async (req, res) => {
         })
 
 
-        await newPhoto.saave();
+        await newPhoto.save();
         res.status(200).json({ message: "Photo added successfully" });
     } catch (error) {
         console.error("Upload failed", error);

@@ -39,7 +39,7 @@ router.post("/", protectRoute, async (req, res) => {
 router.get("/", protectRoute, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5;
+        const limit = parseInt(req.query.limit) || 9;
         const skip = (page - 1) * limit;
 
         const walks = await Walk.find({ user: req.user.id }).sort({ createdAt: -1 })
@@ -109,24 +109,5 @@ router.delete("/:id", protectRoute, async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
-
-router.post("/upload-image", protectRoute, async (req, res) => {
-    try {
-        const data = new Date().toLocaleDateString();
-        const { image, user } = req.body;
-        if (!image) return res.status(400).json({ message: "No image provided" });
-
-        const uploaded = await cloudinary.uploader.upload(image, {
-            folder: `PetWalk/${user.id}/${data}`
-        });
-
-        res.json({ imageUrl: uploaded.secure_url });
-    } catch (error) {
-        console.error("Upload failed", error);
-        res.status(500).json({ message: "Upload error" });
-    }
-});
-
-
 
 export default router;

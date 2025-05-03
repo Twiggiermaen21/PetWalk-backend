@@ -37,49 +37,22 @@ router.get("/", protectRoute, async (req, res) => {
 
 router.delete("/:id", protectRoute, async (req, res) => {
     try {
-        const walk = await Walk.findById(req.params.id);
-        if (!walk) return res.status(400).json({ message: "Walk not found" });
+        const photo = await Photo.findById(req.params.id);
+        if (!photo) return res.status(400).json({ message: "Walk not found" });
 
-        if (walk.user.toString() !== req.user._id.toString())
+        if (photo.user.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
-        // 1. Znajdź psy oznaczone jako usunięte w tym spacerze
-        const deletedDogs = await Dog.find({
-            _id: { $in: walk.dogs },
-            isDeleted: true
-        });
+        const publicId = photo.photo.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
 
-        if (deletedDogs.length > 0) {
-            const deletedDogIds = deletedDogs.map(dog => dog._id);
-
-            // 2. Znajdź inne spacery, w których występują te usunięte psy (poza aktualnym)
-            const walksWithDeletedDogs = await Walk.find({
-                _id: { $ne: walk._id }, // pomijamy aktualny spacer
-                dogs: { $in: deletedDogIds }
-            });
-
-            // 3. Jeśli nie ma innych spacerów, usuń zdjęcia i psy
-            if (walksWithDeletedDogs.length === 0) {
-                for (const dog of deletedDogs) {
-                    try {
-                        if (dog.dogImage) {
-                            const publicId = dog.dogImage.split("/").pop().split(".")[0];
-                            await cloudinary.uploader.destroy(publicId);
-                        }
-                        await dog.deleteOne();
-                    } catch (err) {
-                        console.log("Error deleting dog or image:", err);
-                    }
-                }
-            }
-        }
 
         // 4. Usuń spacer
-        await walk.deleteOne();
-        res.json({ message: "Walk deleted successfully" });
+        await photo.deleteOne();
+        res.json({ message: "Photo deleted successfully" });
 
     } catch (error) {
-        console.log("Error deleting walk", error);
+        console.log("Error deleting Photo", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });

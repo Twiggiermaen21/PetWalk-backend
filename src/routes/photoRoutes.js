@@ -14,6 +14,9 @@ router.get("/", protectRoute, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 18;
         const skip = (page - 1) * limit;
+        console.log("page:", page);
+        console.log("skip:", skip);
+        console.log("limit:", limit);
 
         const photos = await Photo.find({ user: req.user.id })
             .sort({ createdAt: -1 })
@@ -63,7 +66,7 @@ router.post("/upload-image", protectRoute, async (req, res) => {
         const { image, user } = req.body;
         if (!image || !user) {
             console.log(image);
-
+            console.log(user);
             return res.status(400).json({ message: "No image provided" });
         }
 

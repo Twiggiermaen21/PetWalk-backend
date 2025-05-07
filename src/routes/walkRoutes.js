@@ -25,7 +25,7 @@ router.post("/", protectRoute, async (req, res) => {
 
         await User.findByIdAndUpdate(
             req.user._id,
-            { $inc: { rank: 1 } }, // zwiększamy pole rank o 1
+            { $inc: { rank: 1 } },
             { new: true }
         );
         res.status(201).json(newWalk);
@@ -69,7 +69,6 @@ router.delete("/:id", protectRoute, async (req, res) => {
         if (walk.user.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
-        // 1. Znajdź psy oznaczone jako usunięte w tym spacerze
         const deletedDogs = await Dog.find({
             _id: { $in: walk.dogs },
             isDeleted: true
@@ -78,13 +77,11 @@ router.delete("/:id", protectRoute, async (req, res) => {
         if (deletedDogs.length > 0) {
             const deletedDogIds = deletedDogs.map(dog => dog._id);
 
-            // 2. Znajdź inne spacery, w których występują te usunięte psy (poza aktualnym)
             const walksWithDeletedDogs = await Walk.find({
-                _id: { $ne: walk._id }, // pomijamy aktualny spacer
+                _id: { $ne: walk._id }, 
                 dogs: { $in: deletedDogIds }
             });
 
-            // 3. Jeśli nie ma innych spacerów, usuń zdjęcia i psy
             if (walksWithDeletedDogs.length === 0) {
                 for (const dog of deletedDogs) {
                     try {
@@ -100,7 +97,6 @@ router.delete("/:id", protectRoute, async (req, res) => {
             }
         }
 
-        // 4. Usuń spacer
         await walk.deleteOne();
         res.json({ message: "Walk deleted successfully" });
 

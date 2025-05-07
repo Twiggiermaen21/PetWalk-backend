@@ -1,10 +1,10 @@
 import express from "express";
-import Dog from "../models/Dog.js";  // Model psa
+import Dog from "../models/Dog.js"; 
 import cloudinary from "../lib/cloudinary.js"
 import protectRoute from "../middleware/auth.middleware.js";
 const router = express.Router();
 
-// Endpoint do dodawania psa do użytkownika
+
 router.post("/add-dog", protectRoute, async (req, res) => {
     try {
         const { name, breed, weight, age, height, image } = req.body;
@@ -17,8 +17,6 @@ router.post("/add-dog", protectRoute, async (req, res) => {
             imageUrl = uploadResponse.secure_url;
         }
 
-
-        // Tworzymy nowego psa
         const newDog = new Dog({
             name,
             breed: breed || "",
@@ -30,11 +28,8 @@ router.post("/add-dog", protectRoute, async (req, res) => {
 
         });
 
-        // Zapisujemy psa do bazy danych
+
         await newDog.save();
-
-        // Dodajemy psa do tablicy psów użytkownika
-
 
         res.status(200).json({ message: "Dog added successfully", name });
     } catch (error) {
@@ -56,22 +51,10 @@ router.patch("/:id", protectRoute, async (req, res) => {
         const dog = await Dog.findById(req.params.id);
         if (!dog) return res.status(400).json({ message: "Dog not found" });
 
-        //check if user is the creator of the walk
         if (dog.owner.toString() !== req.user._id.toString())
             return res.status(401).json({ message: "Unauthorized" });
 
-        // try {
-        //     if (dog.dogImage) {
-        //         const publicId = dog.dogImage.split("/").pop().split(".")[0];
-        //         await cloudinary.uploader.destroy(publicId);
-        //     }
-        // } catch (deleteError) {
-        //     console.log("Error deleting image from cloudinary", deleteError);
-        // }
-
-        // await dog.deleteOne();
-
-
+       
         dog.isDeleted = true;
         await dog.save();
         res.json({ message: "Dog deleted succesfully" })

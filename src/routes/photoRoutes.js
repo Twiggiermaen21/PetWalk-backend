@@ -14,10 +14,7 @@ router.get("/", protectRoute, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 18;
         const skip = (page - 1) * limit;
-        console.log("page:", page);
-        console.log("skip:", skip);
-        console.log("limit:", limit);
-
+       
         const photos = await Photo.find({ user: req.user.id })
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -50,7 +47,6 @@ router.delete("/:id", protectRoute, async (req, res) => {
         await cloudinary.uploader.destroy(publicId);
 
 
-        // 4. Usuń spacer
         await photo.deleteOne();
         res.json({ message: "Photo deleted successfully" });
 

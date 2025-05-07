@@ -7,8 +7,8 @@ const router = express.Router();
 router.get("/", protectRoute, async (req, res) => {
     try {
         const users = await User.find()
-            .select('username profileImage rank') // wybieramy tylko potrzebne pola
-            .sort({ rank: -1 }) // sortujemy malejąco po rank
+            .select('username profileImage rank') 
+            .sort({ rank: -1 }) 
             .limit(50);
 
         res.send({ users });

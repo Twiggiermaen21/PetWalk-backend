@@ -20,7 +20,6 @@ router.post("/register", async (req, res) => {
         if (username.length < 3) {
             return res.status(400).json({ message: "Username must be at least 3 characters long" });
         }
-        //check if user is already exists
 
         const existingEmail = await User.findOne({ email: email });
         if (existingEmail) return res.status(400).json({ message: "Email already exists" });
@@ -66,15 +65,14 @@ router.post("/login", async (req, res) => {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ message: "All fields are required" });
 
-        //check if user exists
+
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-        //check if password is correct
+
         const isPasswordCorrect = await user.comparePassword(password);
         if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid credentials" });
 
-        //generate token
         const token = generateToken(user._id);
 
         res.status(200).json({
@@ -100,21 +98,16 @@ router.put("/update-user", protectRoute, async (req, res) => {
     try {
         const { username, email, password, profileImage } = req.body;
 
-        // Znajdź użytkownika po ID
         const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Walidacja i dodawanie pól do aktualizacji
-
-        // Walidacja username
         if (username) {
             if (username.length < 3) {
                 return res.status(400).json({ message: "Username must be at least 3 characters long" });
             }
-            user.username = username; // Zmieniamy pole username
+            user.username = username;
         }
 
-        // Walidacja email
         if (email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
@@ -125,24 +118,20 @@ router.put("/update-user", protectRoute, async (req, res) => {
             if (existingUser && existingUser._id.toString() !== req.user._id.toString()) {
                 return res.status(409).json({ message: "Email already in use" });
             }
-            user.email = email; // Zmieniamy pole email
+            user.email = email;
         }
 
-        // Walidacja profileImage
         if (profileImage) {
-            user.profileImage = `https://api.dicebear.com/9.x/avataaars/svg?seed=${profileImage}`; // Zmieniamy profilowe
+            user.profileImage = `https://api.dicebear.com/9.x/avataaars/svg?seed=${profileImage}`;
         }
 
-        // Walidacja i zmiana hasła
         if (password) {
             if (password.length < 8) {
                 return res.status(400).json({ message: "Password must be at least 8 characters long" });
             }
-            user.password = password; // Hasło będzie zahashowane w pre-save hook
+            user.password = password;
         }
-
-        // Zapisz użytkownika po dokonaniu wszystkich zmian
-        await user.save(); // Tylko jedno wywołanie save()
+        await user.save();
 
         return res.status(200).json({
             message: "User updated successfully",
